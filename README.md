@@ -4,6 +4,8 @@
 
 An Elixir NIF (Native Implemented Function) wrapper for the Poppler PDF library, providing fast and efficient PDF processing capabilities.
 
+> **[View Changelog](CHANGELOG.md)** | **[View Contributing Guidelines](.github/CONTRIBUTING.md)**
+
 ## Features
 
 - **Get page count** - Quickly determine the number of pages in a PDF
