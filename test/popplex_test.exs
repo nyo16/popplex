@@ -76,13 +76,63 @@ defmodule PopplexTest do
   end
 
   describe "combine_pdfs/2" do
+    test "returns error for less than 2 files" do
+      assert {:error, reason} = Popplex.combine_pdfs(["single.pdf"], "output.pdf")
+      assert reason == "At least 2 input files are required"
+    end
+
+    test "returns error for non-existent files" do
+      assert {:error, reason} =
+               Popplex.combine_pdfs(["missing1.pdf", "missing2.pdf"], "output.pdf")
+
+      assert String.contains?(reason, "not found")
+      assert String.contains?(reason, "missing1.pdf")
+    end
+
     @tag :integration
-    test "returns not implemented error" do
-      # This feature is not yet implemented in the NIF
-      result = Popplex.combine_pdfs(["file1.pdf", "file2.pdf"], "output.pdf")
-      assert {:error, reason} = result
-      assert is_binary(reason)
-      assert String.contains?(reason, "not yet implemented")
+    test "successfully combines multiple PDFs" do
+      # Use the sample.pdf twice to create a combined PDF
+      input1 = Path.join([__DIR__, "fixtures", "sample.pdf"])
+      input2 = Path.join([__DIR__, "fixtures", "sample.pdf"])
+      output = Path.join([System.tmp_dir!(), "combined_test.pdf"])
+
+      # Clean up any previous test file
+      File.rm(output)
+
+      if File.exists?(input1) do
+        assert {:ok, ^output} = Popplex.combine_pdfs([input1, input2], output)
+        assert File.exists?(output)
+
+        # Verify the combined PDF has 6 pages (3 + 3)
+        assert {:ok, 6} = Popplex.get_page_count(output)
+
+        # Clean up
+        File.rm(output)
+      else
+        IO.puts("Skipping integration test - no sample PDF found")
+      end
+    end
+
+    @tag :integration
+    test "combines three PDFs correctly" do
+      input = Path.join([__DIR__, "fixtures", "sample.pdf"])
+      output = Path.join([System.tmp_dir!(), "combined_three.pdf"])
+
+      # Clean up any previous test file
+      File.rm(output)
+
+      if File.exists?(input) do
+        assert {:ok, ^output} = Popplex.combine_pdfs([input, input, input], output)
+        assert File.exists?(output)
+
+        # Verify the combined PDF has 9 pages (3 + 3 + 3)
+        assert {:ok, 9} = Popplex.get_page_count(output)
+
+        # Clean up
+        File.rm(output)
+      else
+        IO.puts("Skipping integration test - no sample PDF found")
+      end
     end
   end
 end

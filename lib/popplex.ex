@@ -106,9 +106,11 @@ defmodule Popplex do
   @doc """
   Combines multiple PDF files into a single output file.
 
+  Uses the `pdfunite` command-line tool (part of Poppler utilities) to merge PDFs.
+
   ## Parameters
 
-  - `input_files`: List of PDF file paths to combine
+  - `input_files`: List of PDF file paths to combine (minimum 2 files)
   - `output_file`: Path where the combined PDF should be saved
 
   ## Returns
@@ -121,25 +123,49 @@ defmodule Popplex do
       Popplex.combine_pdfs(["file1.pdf", "file2.pdf"], "combined.pdf")
       # => {:ok, "combined.pdf"}
 
-  ## Note
+      Popplex.combine_pdfs(["page1.pdf", "page2.pdf", "page3.pdf"], "book.pdf")
+      # => {:ok, "book.pdf"}
 
-  This feature is not yet fully implemented. The Poppler C++ API has limited
-  support for PDF manipulation. For production use, consider using additional
-  libraries like QPDF or similar tools.
+  ## Requirements
+
+  This function requires `pdfunite` to be installed on your system:
+
+  - **macOS**: `brew install poppler` (included with Poppler)
+  - **Ubuntu/Debian**: `sudo apt-get install poppler-utils`
+  - **Fedora/RHEL**: `sudo dnf install poppler-utils`
   """
   @spec combine_pdfs([Path.t()], Path.t()) :: {:ok, Path.t()} | {:error, error_reason()}
   def combine_pdfs(input_files, output_file)
       when is_list(input_files) and is_binary(output_file) do
-    charlist_inputs =
-      Enum.map(input_files, fn file ->
-        if is_binary(file), do: to_charlist(file), else: file
-      end)
+    cond do
+      length(input_files) < 2 ->
+        {:error, "At least 2 input files are required"}
 
-    charlist_output = if is_binary(output_file), do: to_charlist(output_file), else: output_file
+      not Enum.all?(input_files, &File.exists?/1) ->
+        missing = Enum.reject(input_files, &File.exists?/1)
+        {:error, "Input files not found: #{Enum.join(missing, ", ")}"}
 
-    case NIF.combine_pdfs_nif(charlist_inputs, charlist_output) do
-      {:ok, _} -> {:ok, output_file}
-      error -> error
+      true ->
+        execute_pdfunite(input_files, output_file)
     end
+  end
+
+  defp execute_pdfunite(input_files, output_file) do
+    args = input_files ++ [output_file]
+
+    case System.cmd("pdfunite", args, stderr_to_stdout: true) do
+      {_, 0} ->
+        {:ok, output_file}
+
+      {error_msg, _exit_code} ->
+        error_msg = String.trim(error_msg)
+        {:error, "Failed to combine PDFs: #{error_msg}"}
+    end
+  rescue
+    e in ErlangError ->
+      case e.original do
+        :enoent -> {:error, "pdfunite command not found. Please install poppler-utils."}
+        _ -> {:error, "System error: #{Exception.message(e)}"}
+      end
   end
 end

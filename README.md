@@ -6,7 +6,7 @@ An Elixir NIF (Native Implemented Function) wrapper for the Poppler PDF library,
 
 - **Get page count** - Quickly determine the number of pages in a PDF
 - **Extract text** - Extract text content from entire documents or specific pages
-- **Combine PDFs** - Merge multiple PDF files (planned feature)
+- **Combine PDFs** - Merge multiple PDF files into one
 
 ## Prerequisites
 
@@ -80,11 +80,15 @@ IO.puts("The PDF has #{count} pages")
 ### Combine PDFs
 
 ```elixir
-# Note: This feature is not yet implemented
+# Merge multiple PDFs into one
 {:ok, output} = Popplex.combine_pdfs(
   ["file1.pdf", "file2.pdf", "file3.pdf"],
   "combined.pdf"
 )
+
+# Verify the combined PDF
+{:ok, count} = Popplex.get_page_count("combined.pdf")
+IO.puts("Combined PDF has #{count} pages")
 ```
 
 ## Error Handling
@@ -155,9 +159,9 @@ The architecture consists of:
 
 ## Limitations
 
-- PDF combining is not yet implemented (Poppler C++ API has limited manipulation support)
 - Password-protected PDFs are not currently supported for text extraction
 - Some PDF features (forms, annotations, etc.) are not exposed in the API
+- PDF combining uses the `pdfunite` command-line tool rather than a NIF (spawns external process)
 
 ## Contributing
 
