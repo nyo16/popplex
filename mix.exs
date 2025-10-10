@@ -29,7 +29,7 @@ defmodule Popplex.MixProject do
       source_ref: "v#{@version}",
       groups_for_modules: [
         "Core API": [Popplex],
-        "Native Interface": [Typster.NIF]
+        "Native Interface": [Popplex.NIF]
       ]
     ]
   end
@@ -39,7 +39,7 @@ defmodule Popplex.MixProject do
       name: "popplex",
       files: ~w(lib c_src .formatter.exs mix.exs CHANGELOG.md README.md LICENSE),
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/mylanconnolly/typster"}
+      links: %{"GitHub" => "https://github.com/mylanconnolly/popplex"}
     ]
   end
 
