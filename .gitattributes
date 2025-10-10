@@ -1,0 +1,6 @@
+# Elixir is the primary language
+*.ex linguist-language=Elixir
+*.exs linguist-language=Elixir
+
+# C++ is for NIF support only
+c_src/* linguist-vendored=false

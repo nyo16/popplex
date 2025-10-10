@@ -1,5 +1,7 @@
 # Popplex
 
+[![CI](https://github.com/mylanconnolly/popplex/actions/workflows/ci.yml/badge.svg)](https://github.com/mylanconnolly/popplex/actions/workflows/ci.yml)
+
 An Elixir NIF (Native Implemented Function) wrapper for the Poppler PDF library, providing fast and efficient PDF processing capabilities.
 
 ## Features
@@ -143,6 +145,20 @@ For integration tests, place sample PDF files in `test/fixtures/` and run:
 ```bash
 mix test --include integration
 ```
+
+### Continuous Integration
+
+The project uses GitHub Actions for CI, which:
+- Tests against multiple Elixir/OTP version combinations
+- Runs both unit and integration tests
+- Performs static analysis and code formatting checks
+- Automatically installs Poppler and dependencies
+
+The CI workflow runs on:
+- Every push to `main`/`master` branch
+- Every pull request
+
+You can view the CI status in the badge at the top of this README.
 
 ## How It Works
 
