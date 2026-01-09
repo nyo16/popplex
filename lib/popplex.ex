@@ -9,7 +9,8 @@ defmodule Popplex do
 
   - Get page count from PDF files
   - Extract text content from PDF files (by page or entire document)
-  - Combine multiple PDF files (planned feature)
+  - Combine multiple PDF files
+  - Render PDF pages to images (PNG, JPEG)
 
   ## Examples
 
@@ -21,12 +22,24 @@ defmodule Popplex do
 
       # Extract text from a specific page (0-indexed)
       {:ok, text} = Popplex.get_text("document.pdf", page: 0)
+
+      # Render a page to PNG
+      {:ok, png_data} = Popplex.render_page("document.pdf", page: 0)
+      File.write!("page.png", png_data)
   """
 
   alias Popplex.NIF
 
   @type page_count :: non_neg_integer()
   @type error_reason :: String.t()
+  @type image_format :: :png | :jpeg
+  @type render_opts :: [
+          page: non_neg_integer(),
+          all: boolean(),
+          format: image_format(),
+          dpi: pos_integer(),
+          quality: 1..100
+        ]
 
   @doc """
   Gets the total number of pages in a PDF file.
@@ -167,5 +180,67 @@ defmodule Popplex do
         :enoent -> {:error, "pdfunite command not found. Please install poppler-utils."}
         _ -> {:error, "System error: #{Exception.message(e)}"}
       end
+  end
+
+  @doc """
+  Renders PDF pages to images.
+
+  ## Parameters
+
+  - `path`: Path to the PDF file (string or charlist)
+  - `opts`: Options keyword list
+    - `:page` - Page number to render (0-indexed). If not provided, renders all pages.
+    - `:all` - If true, renders all pages (default behavior)
+    - `:format` - Output format: `:png` (default) or `:jpeg`
+    - `:dpi` - Resolution in dots per inch (default: 150)
+    - `:quality` - JPEG quality 1-100 (default: 90, ignored for PNG)
+
+  ## Returns
+
+  - `{:ok, binary}` for single page - raw image binary data
+  - `{:ok, [binary]}` for all pages - list of raw image binary data
+  - `{:error, reason}` on failure
+
+  ## Examples
+
+      # Render first page as PNG at 150 DPI
+      {:ok, png_data} = Popplex.render_page("document.pdf", page: 0)
+      File.write!("page1.png", png_data)
+
+      # Render all pages as JPEG at 300 DPI
+      {:ok, images} = Popplex.render_page("document.pdf", format: :jpeg, dpi: 300)
+
+      # Render specific page as high-quality JPEG
+      {:ok, jpeg_data} = Popplex.render_page("document.pdf", page: 2, format: :jpeg, quality: 95)
+
+  ## Requirements
+
+  This function requires Poppler to be compiled with the Splash rendering backend.
+  Most standard Poppler installations include this support.
+  """
+  @spec render_page(Path.t(), render_opts()) ::
+          {:ok, binary()} | {:ok, [binary()]} | {:error, error_reason()}
+  def render_page(path, opts \\ []) when is_binary(path) or is_list(path) do
+    charlist_path = if is_binary(path), do: to_charlist(path), else: path
+
+    page_num =
+      cond do
+        Keyword.has_key?(opts, :page) -> Keyword.get(opts, :page)
+        Keyword.get(opts, :all, false) -> -1
+        # Default to all pages
+        true -> -1
+      end
+
+    format =
+      case Keyword.get(opts, :format, :png) do
+        :png -> 0
+        :jpeg -> 1
+        _ -> 0
+      end
+
+    dpi = Keyword.get(opts, :dpi, 150)
+    quality = Keyword.get(opts, :quality, 90)
+
+    NIF.render_page_nif(charlist_path, page_num, format, dpi, quality)
   end
 end

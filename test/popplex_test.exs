@@ -135,4 +135,102 @@ defmodule PopplexTest do
       end
     end
   end
+
+  describe "render_page/2" do
+    test "returns error for non-existent file" do
+      assert {:error, _reason} = Popplex.render_page("nonexistent.pdf")
+    end
+
+    test "returns error for invalid page number" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        assert {:error, _reason} = Popplex.render_page(pdf_path, page: 9999)
+      end
+    end
+
+    test "accepts charlist paths" do
+      assert {:error, _reason} = Popplex.render_page(~c"nonexistent.pdf")
+    end
+
+    @tag :integration
+    test "renders single page as PNG" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        assert {:ok, png_data} = Popplex.render_page(pdf_path, page: 0)
+        assert is_binary(png_data)
+        # PNG magic bytes
+        assert <<0x89, 0x50, 0x4E, 0x47, _rest::binary>> = png_data
+      else
+        IO.puts("Skipping integration test - no sample PDF found at #{pdf_path}")
+      end
+    end
+
+    @tag :integration
+    test "renders single page as JPEG" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        assert {:ok, jpeg_data} = Popplex.render_page(pdf_path, page: 0, format: :jpeg)
+        assert is_binary(jpeg_data)
+        # JPEG magic bytes (SOI marker)
+        assert <<0xFF, 0xD8, _rest::binary>> = jpeg_data
+      else
+        IO.puts("Skipping integration test - no sample PDF found at #{pdf_path}")
+      end
+    end
+
+    @tag :integration
+    test "renders all pages returns list of binaries" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        {:ok, page_count} = Popplex.get_page_count(pdf_path)
+        assert {:ok, images} = Popplex.render_page(pdf_path)
+        assert is_list(images)
+        assert length(images) == page_count
+
+        Enum.each(images, fn img ->
+          assert is_binary(img)
+          # Verify PNG format
+          assert <<0x89, 0x50, 0x4E, 0x47, _rest::binary>> = img
+        end)
+      else
+        IO.puts("Skipping integration test - no sample PDF found at #{pdf_path}")
+      end
+    end
+
+    @tag :integration
+    test "respects DPI parameter" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        {:ok, low_dpi} = Popplex.render_page(pdf_path, page: 0, dpi: 72)
+        {:ok, high_dpi} = Popplex.render_page(pdf_path, page: 0, dpi: 300)
+        # Higher DPI should produce larger image data
+        assert byte_size(high_dpi) > byte_size(low_dpi)
+      else
+        IO.puts("Skipping integration test - no sample PDF found at #{pdf_path}")
+      end
+    end
+
+    @tag :integration
+    test "respects JPEG quality parameter" do
+      pdf_path = Path.join([__DIR__, "fixtures", "sample.pdf"])
+
+      if File.exists?(pdf_path) do
+        {:ok, low_quality} =
+          Popplex.render_page(pdf_path, page: 0, format: :jpeg, quality: 10)
+
+        {:ok, high_quality} =
+          Popplex.render_page(pdf_path, page: 0, format: :jpeg, quality: 95)
+
+        # Higher quality should produce larger file
+        assert byte_size(high_quality) > byte_size(low_quality)
+      else
+        IO.puts("Skipping integration test - no sample PDF found at #{pdf_path}")
+      end
+    end
+  end
 end

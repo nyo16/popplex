@@ -54,4 +54,23 @@ defmodule Popplex.NIF do
   def combine_pdfs_nif(_input_files, _output_file) do
     exit(:nif_library_not_loaded)
   end
+
+  @doc """
+  Renders PDF page(s) to image(s).
+
+  Parameters:
+  - `path`: Path to the PDF file
+  - `page`: Page number (0-indexed) or -1 for all pages
+  - `format`: 0 for PNG, 1 for JPEG
+  - `dpi`: Resolution in dots per inch
+  - `quality`: JPEG quality (1-100), ignored for PNG
+
+  Returns:
+  - `{:ok, binary}` for single page
+  - `{:ok, [binary]}` for all pages
+  - `{:error, reason}` on failure
+  """
+  def render_page_nif(_path, _page, _format, _dpi, _quality) do
+    exit(:nif_library_not_loaded)
+  end
 end
